@@ -213,7 +213,7 @@ train(
     train_data,
     batch_size=256,
     num_epochs=400,
-    learning_rate=0.1,
+    learning_rate=0.01,
     weight_decay=0.0,
     classes=95,
 )
