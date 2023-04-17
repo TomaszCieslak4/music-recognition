@@ -1,3 +1,5 @@
 /dump-spec-trimmed
 dump-spec-trimmed.7z
-__pycache__/dataset.cpython-39.pyc
+
+__pycache__/
+.idea/
