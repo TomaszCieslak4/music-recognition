@@ -2,8 +2,22 @@ import torch
 import torch.nn as nn
 import math
 import torch.optim as optim
+import matplotlib.pyplot as plt
 
 from preprocess import MusicDataset
+
+device = 'cpu'
+if torch.cuda.is_available():
+    device = 'cuda'
+print(f"Using device {device}")
+print(f"Is CUDA supported by this system? {torch.cuda.is_available()}")
+print(f"CUDA version: {torch.version.cuda}")
+  
+# Storing ID of current CUDA device
+cuda_id = torch.cuda.current_device()
+print(f"ID of current CUDA device: {torch.cuda.current_device()}")
+        
+print(f"Name of current CUDA device: {torch.cuda.get_device_name(cuda_id)}")
 
 dataset = MusicDataset("./autotagging_moodtheme.tsv", "dump-spec-trimmed/")
 data_len = len(dataset)
@@ -26,11 +40,11 @@ class RNN1(nn.Module):
 
         self.conv1 = nn.Conv1d(input_channel, output_channel,  3, padding=1)
         
-        self.conv2 = nn.Conv1d(output_channel, output_channel * 2, 3, padding=1) # TODO: Adjust channels
+        self.conv2 = nn.Conv1d(output_channel, output_channel * 2, 3, padding=1)
 
         # RESHAPING?
         
-        self.lstm1 = nn.LSTM(350, hidden_channel, num_layers=3, bias=True) # TODO: Adjust lstm
+        self.lstm1 = nn.LSTM(350, hidden_channel, num_layers=3, bias=True)
 
         self.linear1 = nn.Linear(hidden_channel, linear_transform, bias=True)
 
@@ -60,20 +74,20 @@ def get_accuracy(model, dataset):
 
     loader = torch.utils.data.DataLoader(dataset, batch_size=256)
 
-    model.eval()
+    model.eval().to(device)
 
     incorrect = 0
     total = 0
     for data, target in loader:
+        data = data.to(device)
+        target = target.to(device)
         total += target.shape[1]*target.shape[0]
         res, _ = model(data)
-        incorrect += torch.count_nonzero((torch.where(res > 0, 1, 0) - target))
+        res.to(device)
+        incorrect += torch.count_nonzero((torch.where(res > 0, 1, 0).to(device) - target)).to(device)
 
     return (total - incorrect)/total
 
-# def weighted_cross_entropy_with_logits(logits, targets, pos_weight): # https://stackoverflow.com/a/49104640
-#     return targets * -logits.log() * pos_weight + (1 - targets) * -(1 - logits).log()
-    
 def train(model, train_data, batch_size, num_epochs, learning_rate, weight_decay, classes):
 
     loader = torch.utils.data.DataLoader(
@@ -83,7 +97,7 @@ def train(model, train_data, batch_size, num_epochs, learning_rate, weight_decay
                             lr=learning_rate,
                             weight_decay=weight_decay)
     
-    lossBCE = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([20]*classes))
+    lossBCE = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([29.5]*classes).to(device)).to(device)
 
     all_epoch, all_val_acc, all_train_acc, all_train_cost = [], [], [], []
 
@@ -95,14 +109,14 @@ def train(model, train_data, batch_size, num_epochs, learning_rate, weight_decay
         num_songs = 0
 
         for data, target in loader:
-           
+           data = data.to(device)
+           target = target.to(device)
            if data.shape[0] != batch_size:
                continue
            
-           model.train()
+           model.train().to(device)
            res, _ = model(data)
            loss = lossBCE(res, target.float())
-        #    loss = weighted_cross_entropy_with_logits(res, target.float(), 1)
               
            loss.backward()
 
@@ -119,38 +133,38 @@ def train(model, train_data, batch_size, num_epochs, learning_rate, weight_decay
         all_train_cost.append(train_cost.item())
 
         val_acc = get_accuracy(model, val_data)
-        all_val_acc.append(val_acc)
+        all_val_acc.append(val_acc.item())
 
         train_acc = get_accuracy(model, train_data)
-        all_train_acc.append(train_acc)
-
-        # TODO: Checkpointing
-
-        # if model_name != "":
-        #     PATH = "checkpoints/" + model_name + "/" + \
-        #     "epoch" + str(epoch) + ".pt"
-        #     torch.save({
-        #         'epoch': epoch,
-        #         'model_state_dict': model.state_dict(),
-        #         'loss': train_cost,
-        #         'iteration': iteration,
-        #         'val_acc': val_acc * 100,
-        #         'train_acc':  train_acc * 100
-        #         }, PATH)
+        all_train_acc.append(train_acc.item())
 
         print("Epoch %d. Iteration %d. [Val Acc %.4f%%] \
               [Train Acc %.4f%%, Loss %f]" % (
         epoch, iteration, val_acc * 100, train_acc * 100,
         train_cost))
 
-    
-   
     """
     Plot the learning curve.
     """
-    
+    plt.title("Learning Curve: Loss per Epoch")
+    plt.plot(all_epoch, all_train_cost, label="Train")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.show()
 
+    plt.title("Learning Curve: Accuracy per Epoch")
+    plt.plot(all_epoch, all_train_acc, label="Train")
+    plt.plot(all_epoch, all_val_acc, label="Validation")
+    plt.xlabel("Epochs")
+    plt.ylabel("Accuracy")
+    plt.legend(loc='best')
+    plt.show()
 
+# Train model
 model1 = RNN1(input_channel=96, hidden_channel=16, linear_transform=32, output_channel=8, classes=59)
-# print(get_accuracy(model1, train_data))
-train(model1, train_data, batch_size=256, num_epochs=20, learning_rate=0.01, weight_decay=0.0, classes=59)
+model1.to(device)
+train(model1, train_data, batch_size=256, num_epochs=100, learning_rate=0.01, weight_decay=0.001, classes=59)
+
+# Obtain test acc
+acc = get_accuracy(model1, test_data)
+print("RNN model provided a test accuracy of: ", acc.item())

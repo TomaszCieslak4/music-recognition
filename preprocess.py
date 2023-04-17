@@ -48,4 +48,4 @@ class MusicDataset(Dataset):
 
 # dataset = MusicDataset("./autotagging_moodtheme.tsv", "dump-spec-trimmed/")
 # print(len(dataset))
-# print(dataset[0][1].shape)
+# print(dataset[0][0].shape)
