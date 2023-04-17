@@ -3,7 +3,7 @@ import torch.nn as nn
 import math
 import torch.optim as optim
 
-from dataset import MusicDataset
+from preprocess import MusicDataset
 
 dataset = MusicDataset("./autotagging_moodtheme.tsv", "dump-spec-trimmed/")
 data_len = len(dataset)
