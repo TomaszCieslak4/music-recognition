@@ -85,13 +85,13 @@ Our model starts with two convolutional layers on the input sequence, followed b
 
 ## Model Parameters
 
-`hidden_channel=16`
+`hidden_channel=32`
 
-`linear_transform=32`
+`linear_transform=64`
 
-`output_channel=8`
+`output_channel=32`
 
-Hidden channel, the number of features extracted at each layer in our RNN, was chosen to be 16, as there are 96 input channels associated with each spectrogram signal, if set too high, runtime would be affected, and if set too low, some information loss would occur given the high number of input channels. For similar reasons, linear transform, the dimension of the hidden dense layer, was set to 32, as to avoid information loss. 
+Hidden channel, the number of features extracted at each layer in our RNN, was chosen to be 32, as there are 96 input channels associated with each spectrogram signal, if set too high, runtime would be affected, and if set too low, some information loss would occur given the high number of input channels. Linear transform, and output channel, was set to 32, as to avoid information loss. 
 
 We start with 8 output channels in the first CNN layer, and then double it in the following layer, as we attempt to capture more features along the learning process. Starting off with more than 8 output channels would be too memory intensive for our model, and time consuming for our training of the model. 
 
@@ -119,20 +119,25 @@ We notice a plateau in validation loss and accuracy and believe the model is ove
 
 Following hyperparameters were set to the following values: 
 
-num_layers=3,
-learning_rate=0.01,
-weight_decay=0.001,
-dropout=0.5,
-kernel_size=3,
-pool_size=2
+`num_layers=3,`
+
+`learning_rate=0.0001,`
+
+`weight_decay=0.0,`
+
+`dropout=0.5,`
+
+`kernel_size=3,`
+
+`pool_size=2`
 
 Number of layers in the RNN was set to 3, as the input data is complex and requires a deep network to capture all the relevant information.
 
-Learning rate and weight decay were chosen to be relatively small, given our use of a large dataset, small learning rate and weight decays prevent overfitting to the training data, and allow the model to adjust the optimal weights at each layer gradually to converge to a global optimum.
+Learning rate was chosen to be relatively small, given our use of a large dataset, small learning rate prevent overfitting to the training data, and allow the model to adjust the optimal weights at each layer gradually to converge to a global optimum.
 
 Dropout layer is set to 0.5 to randomly half the data samples in order to minimize reliance on outliers, and any given subset of the data.
 
-Kernel size and pool size were set their respective values, as they are the recommended values to use for most CNN layers.
+Pool size was set to the recommended values which most CNN layers use.
 
 ## Quantitative Measures
 
